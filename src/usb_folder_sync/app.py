@@ -13,10 +13,10 @@ STYLESHEET = """
     font-family: "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
 }
 QMainWindow, QWidget#central {
-    background: #0d0f13;
+    background: #0b0f0e;
 }
 QLabel {
-    color: #e6e8ee;
+    color: #e6efe9;
     font-size: 13px;
 }
 QLabel#title {
@@ -25,20 +25,20 @@ QLabel#title {
     font-weight: 700;
 }
 QLabel#subtitle {
-    color: #8b93a7;
+    color: #8ba398;
     font-size: 12px;
 }
 QLabel#status {
-    background: #1d2330;
-    color: #8b93a7;
+    background: #16211c;
+    color: #8ba398;
     border-radius: 999px;
     padding: 5px 12px;
     font-size: 11px;
     font-weight: 600;
 }
 QLabel#statusOk {
-    background: #12291f;
-    color: #4ade80;
+    background: #0e2a1f;
+    color: #34d399;
     border-radius: 999px;
     padding: 5px 12px;
     font-size: 11px;
@@ -58,41 +58,41 @@ QLabel#cardTitle {
     font-weight: 600;
 }
 QFrame#card {
-    background: #151922;
-    border: 1px solid #232936;
+    background: #121816;
+    border: 1px solid #1f2a25;
     border-radius: 14px;
 }
 QLineEdit {
-    background: #0f131b;
-    border: 1px solid #262d3d;
+    background: #0d1210;
+    border: 1px solid #243029;
     border-radius: 9px;
     padding: 9px 12px;
-    color: #e6e8ee;
+    color: #e6efe9;
     font-size: 13px;
-    selection-background-color: #6c5ce7;
+    selection-background-color: #10b981;
 }
 QLineEdit:focus {
-    border: 1px solid #6c5ce7;
-    background: #10151f;
+    border: 1px solid #10b981;
+    background: #0e1512;
 }
 QPushButton {
-    background: #1a1f2b;
-    color: #e6e8ee;
-    border: 1px solid #2a3143;
+    background: #141a17;
+    color: #e6efe9;
+    border: 1px solid #243029;
     border-radius: 9px;
     padding: 9px 16px;
     font-size: 13px;
     font-weight: 600;
 }
 QPushButton:hover {
-    background: #222a3b;
-    border-color: #3a4358;
+    background: #1b231f;
+    border-color: #33413a;
 }
 QPushButton:pressed {
-    background: #171c26;
+    background: #101512;
 }
 QPushButton#primary {
-    background: #6c5ce7;
+    background: #10b981;
     border: none;
     color: #ffffff;
     font-size: 14px;
@@ -101,42 +101,42 @@ QPushButton#primary {
     border-radius: 11px;
 }
 QPushButton#primary:hover {
-    background: #7f70f2;
+    background: #2fd39a;
 }
 QPushButton#primary:pressed {
-    background: #5a4bd6;
+    background: #0da271;
 }
 QPushButton#primary:disabled {
-    background: #2a2f3d;
-    color: #6b7386;
+    background: #1c2420;
+    color: #5f6f68;
 }
 QPlainTextEdit {
-    background: #0a0d12;
-    border: 1px solid #232936;
+    background: #080c0a;
+    border: 1px solid #1f2a25;
     border-radius: 10px;
-    color: #a7f3c9;
+    color: #6ee7b7;
     font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
     font-size: 12px;
     padding: 12px;
 }
 QMessageBox {
-    background: #151922;
+    background: #121816;
 }
 QMessageBox QLabel {
-    color: #e6e8ee;
+    color: #e6efe9;
     font-size: 13px;
 }
 QMessageBox QPushButton {
-    background: #1a1f2b;
-    border: 1px solid #2a3143;
+    background: #141a17;
+    border: 1px solid #243029;
     border-radius: 8px;
-    color: #e6e8ee;
+    color: #e6efe9;
     padding: 8px 14px;
     font-weight: 600;
 }
 QMessageBox QPushButton:hover {
-    background: #6c5ce7;
-    border-color: #6c5ce7;
+    background: #10b981;
+    border-color: #10b981;
 }
 """
 
