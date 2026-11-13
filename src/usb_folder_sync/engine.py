@@ -8,6 +8,21 @@ from . import adb
 CLOCK_TOLERANCE_SECONDS = 60
 MTIME_EPSILON_SECONDS = 1
 HISTORY_PATH = os.path.join(os.path.expanduser("~"), ".usb_folder_sync", "history.json")
+CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".usb_folder_sync", "config.json")
+
+
+def load_config():
+    try:
+        with open(CONFIG_PATH, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_config(cfg):
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    with open(CONFIG_PATH, "w", encoding="utf-8") as fh:
+        json.dump(cfg, fh, indent=2)
 
 
 @dataclass
