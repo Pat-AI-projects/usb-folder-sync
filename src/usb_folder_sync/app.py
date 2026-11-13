@@ -1,10 +1,14 @@
 import sys
+import time
+from datetime import datetime
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
-                               QLabel, QLineEdit, QMainWindow, QMessageBox,
-                               QPushButton, QPlainTextEdit, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QFrame,
+                               QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+                               QMainWindow, QMessageBox, QProgressBar,
+                               QPushButton, QTableWidget, QTableWidgetItem,
+                               QVBoxLayout, QWidget)
 
 from . import adb, engine
 
@@ -12,21 +16,34 @@ STYLESHEET = """
 * {
     font-family: "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
 }
-QMainWindow, QWidget#central {
+QMainWindow, QWidget#central, QWidget#mainArea {
     background: #0b0f0e;
+}
+QFrame#sidebar {
+    background: #0e1311;
+    border-right: 1px solid #1f2a25;
 }
 QLabel {
     color: #e6efe9;
     font-size: 13px;
 }
-QLabel#title {
+QLabel#sideTitle {
     color: #ffffff;
-    font-size: 22px;
+    font-size: 15px;
     font-weight: 700;
 }
-QLabel#subtitle {
-    color: #8ba398;
-    font-size: 12px;
+QLabel#navActive {
+    color: #34d399;
+    background: #12241d;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+QLabel#title {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 700;
 }
 QLabel#status {
     background: #16211c;
@@ -52,28 +69,46 @@ QLabel#statusWarn {
     font-size: 11px;
     font-weight: 600;
 }
-QLabel#cardTitle {
+QLabel#kpiValue {
     color: #ffffff;
-    font-size: 13px;
+    font-size: 20px;
+    font-weight: 700;
+}
+QLabel#kpiLabel {
+    color: #8ba398;
+    font-size: 11px;
     font-weight: 600;
+}
+QLabel#devLabel {
+    color: #8ba398;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel#devValue {
+    color: #e6efe9;
+    font-size: 12px;
 }
 QFrame#card {
     background: #121816;
     border: 1px solid #1f2a25;
     border-radius: 14px;
 }
+QFrame#devCard {
+    background: #121816;
+    border: 1px solid #1f2a25;
+    border-radius: 12px;
+}
 QLineEdit {
     background: #0d1210;
     border: 1px solid #243029;
     border-radius: 9px;
-    padding: 9px 12px;
+    padding: 8px 12px;
     color: #e6efe9;
     font-size: 13px;
     selection-background-color: #10b981;
 }
 QLineEdit:focus {
     border: 1px solid #10b981;
-    background: #0e1512;
 }
 QPushButton {
     background: #141a17;
@@ -95,10 +130,10 @@ QPushButton#primary {
     background: #10b981;
     border: none;
     color: #ffffff;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
-    padding: 13px;
-    border-radius: 11px;
+    padding: 10px 18px;
+    border-radius: 10px;
 }
 QPushButton#primary:hover {
     background: #2fd39a;
@@ -110,14 +145,71 @@ QPushButton#primary:disabled {
     background: #1c2420;
     color: #5f6f68;
 }
-QPlainTextEdit {
-    background: #080c0a;
+QPushButton#apply {
+    background: #12241d;
+    border: 1px solid #1f4636;
+    color: #34d399;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: 10px;
+}
+QPushButton#apply:hover {
+    background: #173327;
+}
+QPushButton#apply:disabled {
+    background: #1c2420;
+    color: #5f6f68;
+    border-color: #243029;
+}
+QTableWidget {
+    background: #0d1210;
     border: 1px solid #1f2a25;
     border-radius: 10px;
-    color: #6ee7b7;
-    font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+    gridline-color: #1a231f;
+    color: #e6efe9;
     font-size: 12px;
-    padding: 12px;
+    selection-background-color: #12352a;
+    outline: none;
+}
+QTableWidget::item {
+    padding: 4px;
+    border: none;
+}
+QHeaderView::section {
+    background: #121816;
+    color: #8ba398;
+    border: none;
+    border-bottom: 1px solid #1f2a25;
+    padding: 9px 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+QCheckBox {
+    color: #e6efe9;
+    font-size: 12px;
+    spacing: 6px;
+}
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #33413a;
+    background: #0d1210;
+}
+QCheckBox::indicator:checked {
+    background: #10b981;
+    border-color: #10b981;
+}
+QProgressBar {
+    background: #0d1210;
+    border: none;
+    border-radius: 6px;
+    height: 10px;
+    text-align: center;
+}
+QProgressBar::chunk {
+    background: #10b981;
+    border-radius: 6px;
 }
 QMessageBox {
     background: #121816;
@@ -141,90 +233,198 @@ QMessageBox QPushButton:hover {
 """
 
 
+def human_size(n):
+    value = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < 1024 or unit == "TB":
+            return f"{value:.1f} {unit}" if unit != "B" else f"{int(value)} B"
+        value /= 1024
+    return f"{n} B"
+
+
+def fmt_time(ts):
+    return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else "—"
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("USB Folder Sync")
-        self.setMinimumSize(620, 560)
+        self.setMinimumSize(980, 640)
+        self.plan = []
 
         central = QWidget()
         central.setObjectName("central")
-        outer = QVBoxLayout(central)
-        outer.setContentsMargins(28, 24, 28, 24)
-        outer.setSpacing(18)
+        root = QHBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        sidebar = QFrame()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(220)
+        side_layout = QVBoxLayout(sidebar)
+        side_layout.setContentsMargins(16, 20, 16, 20)
+        side_layout.setSpacing(14)
+
+        side_title = QLabel("USB Folder Sync")
+        side_title.setObjectName("sideTitle")
+        side_layout.addWidget(side_title)
+
+        nav_active = QLabel("⇄  Sync")
+        nav_active.setObjectName("navActive")
+        side_layout.addWidget(nav_active)
+        side_layout.addSpacing(10)
+
+        dev_card = QFrame()
+        dev_card.setObjectName("devCard")
+        dev_layout = QVBoxLayout(dev_card)
+        dev_layout.setContentsMargins(14, 12, 14, 12)
+        dev_layout.setSpacing(6)
+        dev_header = QLabel("DEVICE")
+        dev_header.setObjectName("devLabel")
+        dev_layout.addWidget(dev_header)
+        self.dev_model = QLabel("No device")
+        self.dev_model.setObjectName("devValue")
+        dev_layout.addWidget(self.dev_model)
+        self.dev_drift = QLabel("drift: —")
+        self.dev_drift.setObjectName("devValue")
+        dev_layout.addWidget(self.dev_drift)
+        self.dev_storage = QLabel("storage: —")
+        self.dev_storage.setObjectName("devValue")
+        dev_layout.addWidget(self.dev_storage)
+        side_layout.addWidget(dev_card)
+        side_layout.addStretch(1)
+
+        root.addWidget(sidebar)
+
+        main_area = QWidget()
+        main_area.setObjectName("mainArea")
+        main_layout = QVBoxLayout(main_area)
+        main_layout.setContentsMargins(24, 20, 24, 20)
+        main_layout.setSpacing(16)
 
         header = QHBoxLayout()
-        title_block = QVBoxLayout()
-        title_block.setSpacing(2)
-        title = QLabel("USB Folder Sync")
+        title = QLabel("Sync")
         title.setObjectName("title")
-        subtitle = QLabel("KeePass-style two-way sync between PC and phone over USB")
-        subtitle.setObjectName("subtitle")
-        title_block.addWidget(title)
-        title_block.addWidget(subtitle)
-        header.addLayout(title_block, 1)
+        header.addWidget(title)
+        header.addStretch(1)
         self.status = QLabel("●  No device checked")
         self.status.setObjectName("status")
-        self.status.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
         header.addWidget(self.status)
-        outer.addLayout(header)
+        main_layout.addLayout(header)
 
-        card = QFrame()
-        card.setObjectName("card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(20, 20, 20, 20)
-        card_layout.setSpacing(14)
+        kpi_row = QHBoxLayout()
+        kpi_row.setSpacing(12)
+        self.kpis = {}
+        for key, label in (("files", "FILES IN PLAN"), ("size", "DATA TO MOVE"),
+                           ("last", "LAST SYNC"), ("conflicts", "CONFLICTS")):
+            card = QFrame()
+            card.setObjectName("card")
+            cl = QVBoxLayout(card)
+            cl.setContentsMargins(16, 12, 16, 12)
+            cl.setSpacing(2)
+            value = QLabel("—")
+            value.setObjectName("kpiValue")
+            lab = QLabel(label)
+            lab.setObjectName("kpiLabel")
+            cl.addWidget(value)
+            cl.addWidget(lab)
+            kpi_row.addWidget(card)
+            self.kpis[key] = value
+        main_layout.addLayout(kpi_row)
 
-        card_title = QLabel("Folders")
-        card_title.setObjectName("cardTitle")
-        card_layout.addWidget(card_title)
+        plan_card = QFrame()
+        plan_card.setObjectName("card")
+        plan_layout = QVBoxLayout(plan_card)
+        plan_layout.setContentsMargins(18, 16, 18, 16)
+        plan_layout.setSpacing(12)
 
-        pc_row = QHBoxLayout()
-        pc_row.setSpacing(10)
+        toolbar = QHBoxLayout()
         self.pc_edit = QLineEdit()
-        self.pc_edit.setPlaceholderText("Choose the folder on this PC…")
-        pc_button = QPushButton("Browse…")
-        pc_button.clicked.connect(self.pick_pc)
-        pc_row.addWidget(self.pc_edit, 1)
-        pc_row.addWidget(pc_button)
-        card_layout.addLayout(pc_row)
-
-        phone_row = QHBoxLayout()
-        phone_row.setSpacing(10)
+        self.pc_edit.setPlaceholderText("PC folder…")
+        browse = QPushButton("Browse…")
+        browse.clicked.connect(self.pick_pc)
         self.phone_edit = QLineEdit("/sdcard/Sync")
-        self.phone_edit.setPlaceholderText("Folder on the phone, e.g. /sdcard/Sync")
-        phone_row.addWidget(self.phone_edit, 1)
-        card_layout.addLayout(phone_row)
-
+        self.phone_edit.setPlaceholderText("Phone folder, e.g. /sdcard/Sync")
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Filter files…")
+        self.search.setMaximumWidth(200)
+        self.search.textChanged.connect(self.filter_table)
+        self.select_all = QCheckBox("Select all")
+        self.select_all.setChecked(True)
+        self.select_all.stateChanged.connect(self.toggle_all)
         self.sync_button = QPushButton("Sync now")
         self.sync_button.setObjectName("primary")
         self.sync_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.sync_button.clicked.connect(self.sync_now)
-        card_layout.addWidget(self.sync_button)
+        self.sync_button.clicked.connect(self.build_plan)
+        self.apply_button = QPushButton("Apply selected")
+        self.apply_button.setObjectName("apply")
+        self.apply_button.setEnabled(False)
+        self.apply_button.clicked.connect(self.apply_selected)
+        toolbar.addWidget(self.pc_edit, 1)
+        toolbar.addWidget(browse)
+        toolbar.addWidget(self.phone_edit, 1)
+        toolbar.addWidget(self.search)
+        toolbar.addWidget(self.select_all)
+        toolbar.addWidget(self.sync_button)
+        toolbar.addWidget(self.apply_button)
+        plan_layout.addLayout(toolbar)
 
-        outer.addWidget(card)
+        self.table = QTableWidget(0, 6)
+        self.table.setHorizontalHeaderLabels(["", "Action", "File", "Size", "Modified", "Reason"])
+        self.table.verticalHeader().setVisible(False)
+        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table_header = self.table.horizontalHeader()
+        table_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        table_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        table_header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        table_header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        table_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        table_header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        plan_layout.addWidget(self.table)
 
-        report_card = QFrame()
-        report_card.setObjectName("card")
-        report_layout = QVBoxLayout(report_card)
-        report_layout.setContentsMargins(20, 16, 20, 16)
-        report_layout.setSpacing(10)
-        report_title = QLabel("Sync report")
-        report_title.setObjectName("cardTitle")
-        report_layout.addWidget(report_title)
-        self.report = QPlainTextEdit()
-        self.report.setReadOnly(True)
-        self.report.setPlaceholderText("Nothing synced yet. Connect your phone and press “Sync now”.")
-        report_layout.addWidget(self.report)
-        outer.addWidget(report_card, 1)
+        progress_row = QHBoxLayout()
+        self.progress = QProgressBar()
+        self.progress.setValue(0)
+        self.progress_label = QLabel("Idle")
+        self.progress_label.setObjectName("devLabel")
+        progress_row.addWidget(self.progress, 1)
+        progress_row.addWidget(self.progress_label)
+        plan_layout.addLayout(progress_row)
 
+        main_layout.addWidget(plan_card, 1)
+        root.addWidget(main_area, 1)
         self.setCentralWidget(central)
+
+        self.refresh_device()
 
     def set_status(self, text, kind="neutral"):
         self.status.setText(text)
         self.status.setObjectName({"ok": "statusOk", "warn": "statusWarn"}.get(kind, "status"))
         self.status.style().unpolish(self.status)
         self.status.style().polish(self.status)
+
+    def refresh_device(self):
+        try:
+            model = adb.device_model()
+            ok, drift = engine.check_clocks()
+            self.dev_model.setText(model)
+            self.dev_drift.setText(f"clock drift: {drift:.0f}s / {engine.CLOCK_TOLERANCE_SECONDS}s tolerance")
+            if ok:
+                self.set_status(f"●  {model} · clocks in sync", "ok")
+            else:
+                self.set_status(f"●  {model} · clocks off by {drift:.0f}s", "warn")
+            try:
+                s = adb.storage(self.phone_edit.text().strip() or "/sdcard")
+                self.dev_storage.setText(f"storage: {s['used']} used · {s['free']} free of {s['size']}")
+            except adb.AdbError:
+                self.dev_storage.setText("storage: —")
+        except adb.AdbError:
+            self.dev_model.setText("No device")
+            self.dev_drift.setText("clock drift: —")
+            self.dev_storage.setText("storage: —")
+            self.set_status("●  No device", "warn")
 
     def pick_pc(self):
         path = QFileDialog.getExistingDirectory(self, "Choose PC folder")
@@ -249,14 +449,15 @@ class MainWindow(QMainWindow):
             return "copy"
         return "skip"
 
-    def sync_now(self):
+    def build_plan(self):
         local_root = self.pc_edit.text().strip()
         remote_root = self.phone_edit.text().strip()
         if not local_root or not remote_root:
             QMessageBox.warning(self, "Missing folder", "Choose both the PC folder and the phone folder.")
             return
         self.sync_button.setEnabled(False)
-        self.set_status("●  Checking device and clocks…")
+        self.apply_button.setEnabled(False)
+        self.set_status("●  Checking clocks…")
         try:
             ok, drift = engine.check_clocks()
         except adb.AdbError as exc:
@@ -267,6 +468,7 @@ class MainWindow(QMainWindow):
         if not ok:
             self.sync_button.setEnabled(True)
             self.set_status(f"●  Clocks off by {drift:.0f}s", "warn")
+            engine.log_run(local_root, remote_root, [], False, drift)
             QMessageBox.warning(
                 self, "Clocks not synchronized",
                 f"PC and phone clocks differ by {drift:.0f}s "
@@ -274,15 +476,78 @@ class MainWindow(QMainWindow):
             return
         self.set_status("●  Device connected · clocks in sync", "ok")
         try:
-            report = engine.plan_sync(local_root, remote_root, self.decide)
-            engine.execute(local_root, remote_root, report)
+            self.plan = engine.plan_sync(local_root, remote_root, self.decide)
         except adb.AdbError as exc:
             self.sync_button.setEnabled(True)
-            QMessageBox.critical(self, "Sync failed", str(exc))
+            QMessageBox.critical(self, "Plan failed", str(exc))
             return
         self.sync_button.setEnabled(True)
-        lines = [f"{item.action.upper():5}  {item.path}  —  {item.detail}" for item in report]
-        self.report.setPlainText("\n".join(lines) if lines else "Nothing to do — both folders are already in sync.")
+        self.fill_table(self.plan)
+        self.apply_button.setEnabled(True)
+        moved = sum(i.size for i in self.plan if i.action in ("push", "pull"))
+        conflicts = sum(1 for i in self.plan if "resolved" in i.detail)
+        self.kpis["files"].setText(str(len(self.plan)))
+        self.kpis["size"].setText(human_size(moved))
+        self.kpis["conflicts"].setText(str(conflicts))
+        self.progress.setValue(0)
+        self.progress_label.setText(f"Plan ready: {len(self.plan)} files")
+
+    def fill_table(self, items):
+        self.table.setRowCount(0)
+        for row, item in enumerate(items):
+            self.table.insertRow(row)
+            check = QTableWidgetItem()
+            check.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            check.setCheckState(Qt.CheckState.Checked if item.action != "skip" else Qt.CheckState.Unchecked)
+            self.table.setItem(row, 0, check)
+            self.table.setItem(row, 1, QTableWidgetItem(item.action.upper()))
+            self.table.setItem(row, 2, QTableWidgetItem(item.path))
+            self.table.setItem(row, 3, QTableWidgetItem(human_size(item.size)))
+            self.table.setItem(row, 4, QTableWidgetItem(fmt_time(item.mtime)))
+            self.table.setItem(row, 5, QTableWidgetItem(item.detail))
+        self.filter_table(self.search.text())
+
+    def filter_table(self, text):
+        needle = text.strip().lower()
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 2)
+            self.table.setRowHidden(row, bool(needle) and needle not in (item.text().lower() if item else ""))
+
+    def toggle_all(self, state):
+        checked = state == Qt.CheckState.Checked.value
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item:
+                item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
+
+    def selected_items(self):
+        items = []
+        for row in range(self.table.rowCount()):
+            check = self.table.item(row, 0)
+            if check and check.checkState() == Qt.CheckState.Checked:
+                items.append(self.plan[row])
+        return items
+
+    def on_progress(self, path, frac):
+        self.progress.setValue(int(frac * 100))
+        self.progress_label.setText(path if path else "Done")
+
+    def apply_selected(self):
+        local_root = self.pc_edit.text().strip()
+        remote_root = self.phone_edit.text().strip()
+        items = [i for i in self.selected_items() if i.action in ("push", "pull")]
+        self.apply_button.setEnabled(False)
+        self.sync_button.setEnabled(False)
+        try:
+            engine.apply(local_root, remote_root, items, progress=self.on_progress)
+            engine.log_run(local_root, remote_root, self.plan, True, 0)
+        except adb.AdbError as exc:
+            QMessageBox.critical(self, "Sync failed", str(exc))
+        self.sync_button.setEnabled(True)
+        self.apply_button.setEnabled(True)
+        self.kpis["last"].setText(datetime.now().strftime("%H:%M"))
+        self.progress_label.setText(f"Applied {len(items)} file(s)")
+        self.set_status("●  Sync complete", "ok")
 
 
 def main():
