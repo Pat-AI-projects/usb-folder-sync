@@ -102,7 +102,7 @@ QLineEdit {
     background: #0d1210;
     border: 1px solid #243029;
     border-radius: 9px;
-    padding: 8px 12px;
+    padding: 10px 13px;
     color: #e6efe9;
     font-size: 13px;
     selection-background-color: #10b981;
@@ -115,7 +115,7 @@ QPushButton {
     color: #e6efe9;
     border: 1px solid #243029;
     border-radius: 9px;
-    padding: 9px 16px;
+    padding: 10px 18px;
     font-size: 13px;
     font-weight: 600;
 }
@@ -172,7 +172,7 @@ QTableWidget {
     outline: none;
 }
 QTableWidget::item {
-    padding: 4px;
+    padding: 6px;
     border: none;
 }
 QHeaderView::section {
@@ -324,7 +324,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("USB Folder Sync")
-        self.setMinimumSize(980, 640)
+        self.setMinimumSize(880, 600)
         self.plan = []
 
         central = QWidget()
@@ -413,7 +413,8 @@ class MainWindow(QMainWindow):
         plan_layout.setContentsMargins(18, 16, 18, 16)
         plan_layout.setSpacing(12)
 
-        toolbar = QHBoxLayout()
+        folders_row = QHBoxLayout()
+        folders_row.setSpacing(10)
         self.pc_edit = QLineEdit()
         self.pc_edit.setPlaceholderText("PC folder…")
         browse = QPushButton("Browse…")
@@ -422,9 +423,16 @@ class MainWindow(QMainWindow):
         self.phone_edit.setPlaceholderText("Phone folder, e.g. /sdcard/Sync")
         phone_browse = QPushButton("Browse…")
         phone_browse.clicked.connect(self.pick_phone)
+        folders_row.addWidget(self.pc_edit, 1)
+        folders_row.addWidget(browse)
+        folders_row.addWidget(self.phone_edit, 1)
+        folders_row.addWidget(phone_browse)
+        plan_layout.addLayout(folders_row)
+
+        actions_row = QHBoxLayout()
+        actions_row.setSpacing(10)
         self.search = QLineEdit()
         self.search.setPlaceholderText("Filter files…")
-        self.search.setMaximumWidth(200)
         self.search.textChanged.connect(self.filter_table)
         self.select_all = QCheckBox("Select all")
         self.select_all.setChecked(True)
@@ -437,15 +445,12 @@ class MainWindow(QMainWindow):
         self.apply_button.setObjectName("apply")
         self.apply_button.setEnabled(False)
         self.apply_button.clicked.connect(self.apply_selected)
-        toolbar.addWidget(self.pc_edit, 1)
-        toolbar.addWidget(browse)
-        toolbar.addWidget(self.phone_edit, 1)
-        toolbar.addWidget(phone_browse)
-        toolbar.addWidget(self.search)
-        toolbar.addWidget(self.select_all)
-        toolbar.addWidget(self.sync_button)
-        toolbar.addWidget(self.apply_button)
-        plan_layout.addLayout(toolbar)
+        actions_row.addWidget(self.search, 1)
+        actions_row.addWidget(self.select_all)
+        actions_row.addStretch(1)
+        actions_row.addWidget(self.sync_button)
+        actions_row.addWidget(self.apply_button)
+        plan_layout.addLayout(actions_row)
 
         self.table = QTableWidget(0, 6)
         self.table.setHorizontalHeaderLabels(["", "Action", "File", "Size", "Modified", "Reason"])
