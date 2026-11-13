@@ -67,6 +67,22 @@ def list_files(remote_dir):
     return files
 
 
+def list_dirs(remote_dir):
+    cmd = f"find {shlex.quote(remote_dir)} -maxdepth 1 -type d"
+    out = _remote(cmd)
+    prefix = remote_dir.rstrip("/") + "/"
+    root = remote_dir.rstrip("/")
+    dirs = []
+    for line in out.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        rel = line[len(prefix):] if line.startswith(prefix) else line
+        if rel and rel != root:
+            dirs.append(rel)
+    return sorted(dirs)
+
+
 def makedirs(remote_dir):
     _remote(f"mkdir -p {shlex.quote(remote_dir)}")
 
