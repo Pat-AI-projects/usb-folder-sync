@@ -255,6 +255,252 @@ QMessageBox QPushButton:hover {
 }
 """
 
+LIGHT_STYLESHEET = """
+* {
+    font-family: "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
+}
+QMainWindow, QWidget#central, QWidget#mainArea {
+    background: #f7f8fa;
+}
+QFrame#sidebar {
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+}
+QLabel {
+    color: #1f2937;
+    font-size: 13px;
+}
+QLabel#sideTitle {
+    color: #111827;
+    font-size: 15px;
+    font-weight: 700;
+}
+QLabel#navActive {
+    color: #059669;
+    background: #ecfdf5;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+QLabel#title {
+    color: #111827;
+    font-size: 20px;
+    font-weight: 700;
+}
+QLabel#status {
+    background: #eef0f3;
+    color: #6b7280;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel#statusOk {
+    background: #ecfdf5;
+    color: #059669;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel#statusWarn {
+    background: #fef2f2;
+    color: #dc2626;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel#kpiValue {
+    color: #111827;
+    font-size: 20px;
+    font-weight: 700;
+}
+QLabel#kpiLabel {
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel#devLabel {
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel#devValue {
+    color: #1f2937;
+    font-size: 12px;
+}
+QFrame#card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+}
+QFrame#devCard {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+QLineEdit {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    padding: 10px 13px;
+    color: #111827;
+    font-size: 13px;
+    selection-background-color: #a7f3d0;
+}
+QLineEdit:focus {
+    border: 1px solid #10b981;
+}
+QPushButton {
+    background: #ffffff;
+    color: #1f2937;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+}
+QPushButton:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+QPushButton:pressed {
+    background: #e5e7eb;
+}
+QPushButton#primary {
+    background: #10b981;
+    border: none;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: 10px;
+}
+QPushButton#primary:hover {
+    background: #34d399;
+}
+QPushButton#primary:pressed {
+    background: #059669;
+}
+QPushButton#primary:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+}
+QPushButton#apply {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #059669;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: 10px;
+}
+QPushButton#apply:hover {
+    background: #d1fae5;
+}
+QPushButton#apply:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    border-color: #d1d5db;
+}
+QTableWidget {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    gridline-color: #eef0f3;
+    color: #1f2937;
+    font-size: 12px;
+    selection-background-color: #d1fae5;
+    outline: none;
+}
+QTableWidget::item {
+    padding: 6px;
+    border: none;
+}
+QHeaderView::section {
+    background: #f9fafb;
+    color: #6b7280;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 9px 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+QCheckBox {
+    color: #1f2937;
+    font-size: 12px;
+    spacing: 6px;
+}
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+}
+QCheckBox::indicator:checked {
+    background: #10b981;
+    border-color: #10b981;
+}
+QProgressBar {
+    background: #eef0f3;
+    border: none;
+    border-radius: 6px;
+    height: 10px;
+    text-align: center;
+}
+QProgressBar::chunk {
+    background: #10b981;
+    border-radius: 6px;
+}
+QListWidget {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    color: #1f2937;
+    font-size: 13px;
+    padding: 6px;
+    outline: none;
+}
+QListWidget::item {
+    padding: 7px 10px;
+    border-radius: 6px;
+}
+QListWidget::item:hover {
+    background: #f3f4f6;
+}
+QListWidget::item:selected {
+    background: #d1fae5;
+    color: #065f46;
+}
+QDialog {
+    background: #ffffff;
+}
+QMessageBox {
+    background: #ffffff;
+}
+QMessageBox QLabel {
+    color: #1f2937;
+    font-size: 13px;
+}
+QMessageBox QPushButton {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #1f2937;
+    padding: 8px 14px;
+    font-weight: 600;
+}
+QMessageBox QPushButton:hover {
+    background: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+}
+"""
+
+THEMES = {"dark": STYLESHEET, "light": LIGHT_STYLESHEET}
+
 
 def human_size(n):
     value = float(n)
@@ -367,6 +613,10 @@ class MainWindow(QMainWindow):
         self.dev_storage.setObjectName("devValue")
         dev_layout.addWidget(self.dev_storage)
         side_layout.addWidget(dev_card)
+        side_layout.addSpacing(6)
+        self.theme_button = QPushButton()
+        self.theme_button.clicked.connect(self.toggle_theme)
+        side_layout.addWidget(self.theme_button)
         side_layout.addStretch(1)
 
         root.addWidget(sidebar)
@@ -479,7 +729,21 @@ class MainWindow(QMainWindow):
         root.addWidget(main_area, 1)
         self.setCentralWidget(central)
 
+        self.theme = engine.load_config().get("theme", "dark")
+        self.update_theme_button()
         self.refresh_device()
+
+    def update_theme_button(self):
+        self.theme_button.setText("☀  Switch to light mode" if self.theme == "dark" else "🌙  Switch to dark mode")
+
+    def toggle_theme(self):
+        self.theme = "light" if self.theme == "dark" else "dark"
+        QApplication.instance().setStyleSheet(THEMES[self.theme])
+        cfg = engine.load_config()
+        cfg["theme"] = self.theme
+        engine.save_config(cfg)
+        self.update_theme_button()
+        self.set_status(self.status.text(), {"statusOk": "ok", "statusWarn": "warn"}.get(self.status.objectName(), "neutral"))
 
     def set_status(self, text, kind="neutral"):
         self.status.setText(text)
@@ -641,7 +905,7 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    app.setStyleSheet(STYLESHEET)
+    app.setStyleSheet(THEMES[engine.load_config().get("theme", "dark")])
     app.setFont(QFont("Segoe UI", 10))
     window = MainWindow()
     window.show()
