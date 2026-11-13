@@ -4,11 +4,11 @@ from datetime import datetime
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QFrame,
-                               QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-                               QMainWindow, QMessageBox, QProgressBar,
-                               QPushButton, QTableWidget, QTableWidgetItem,
-                               QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
+                               QFrame, QHBoxLayout, QHeaderView, QLabel,
+                               QLineEdit, QListWidget, QMainWindow, QMessageBox,
+                               QProgressBar, QPushButton, QTableWidget,
+                               QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import adb, engine
 
@@ -211,6 +211,29 @@ QProgressBar::chunk {
     background: #10b981;
     border-radius: 6px;
 }
+QListWidget {
+    background: #0d1210;
+    border: 1px solid #243029;
+    border-radius: 10px;
+    color: #e6efe9;
+    font-size: 13px;
+    padding: 6px;
+    outline: none;
+}
+QListWidget::item {
+    padding: 7px 10px;
+    border-radius: 6px;
+}
+QListWidget::item:hover {
+    background: #16211c;
+}
+QListWidget::item:selected {
+    background: #12352a;
+    color: #34d399;
+}
+QDialog {
+    background: #0e1311;
+}
 QMessageBox {
     background: #121816;
 }
@@ -244,6 +267,57 @@ def human_size(n):
 
 def fmt_time(ts):
     return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else "—"
+
+
+class RemoteFolderDialog(QDialog):
+    def __init__(self, parent, start):
+        super().__init__(parent)
+        self.setWindowTitle("Choose phone folder")
+        self.setMinimumSize(420, 420)
+        self.current = start.rstrip("/") or "/"
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
+        self.path_label = QLabel(self.current)
+        self.path_label.setObjectName("devValue")
+        layout.addWidget(self.path_label)
+        self.list = QListWidget()
+        self.list.itemDoubleClicked.connect(self.enter)
+        layout.addWidget(self.list)
+        buttons = QHBoxLayout()
+        up = QPushButton("Up")
+        up.clicked.connect(self.go_up)
+        buttons.addWidget(up)
+        buttons.addStretch(1)
+        select = QPushButton("Select this folder")
+        select.setObjectName("primary")
+        select.clicked.connect(self.accept)
+        cancel = QPushButton("Cancel")
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(select)
+        buttons.addWidget(cancel)
+        layout.addLayout(buttons)
+        self.refresh()
+
+    def refresh(self):
+        self.path_label.setText(self.current)
+        self.list.clear()
+        try:
+            dirs = adb.list_dirs(self.current)
+        except adb.AdbError as exc:
+            QMessageBox.critical(self, "USB error", str(exc))
+            return
+        for d in dirs:
+            self.list.addItem(f"📁 {d}")
+
+    def enter(self, item):
+        self.current = f"{self.current.rstrip('/')}/{item.text().removeprefix('📁 ')}"
+        self.refresh()
+
+    def go_up(self):
+        parent = self.current.rsplit("/", 1)[0] or "/"
+        self.current = parent
+        self.refresh()
 
 
 class MainWindow(QMainWindow):
@@ -346,6 +420,8 @@ class MainWindow(QMainWindow):
         browse.clicked.connect(self.pick_pc)
         self.phone_edit = QLineEdit("/sdcard/Sync")
         self.phone_edit.setPlaceholderText("Phone folder, e.g. /sdcard/Sync")
+        phone_browse = QPushButton("Browse…")
+        phone_browse.clicked.connect(self.pick_phone)
         self.search = QLineEdit()
         self.search.setPlaceholderText("Filter files…")
         self.search.setMaximumWidth(200)
@@ -364,6 +440,7 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(self.pc_edit, 1)
         toolbar.addWidget(browse)
         toolbar.addWidget(self.phone_edit, 1)
+        toolbar.addWidget(phone_browse)
         toolbar.addWidget(self.search)
         toolbar.addWidget(self.select_all)
         toolbar.addWidget(self.sync_button)
@@ -430,6 +507,13 @@ class MainWindow(QMainWindow):
         path = QFileDialog.getExistingDirectory(self, "Choose PC folder")
         if path:
             self.pc_edit.setText(path)
+
+    def pick_phone(self):
+        start = self.phone_edit.text().strip() or "/sdcard"
+        dlg = RemoteFolderDialog(self, start)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.phone_edit.setText(dlg.current)
+            self.refresh_device()
 
     def decide(self, rel, reason):
         box = QMessageBox(self)
