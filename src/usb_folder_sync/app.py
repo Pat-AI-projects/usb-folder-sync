@@ -1,14 +1,16 @@
+import os
 import sys
 import time
 from datetime import datetime
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
-                               QFrame, QHBoxLayout, QHeaderView, QLabel,
-                               QLineEdit, QListWidget, QMainWindow, QMessageBox,
-                               QProgressBar, QPushButton, QTableWidget,
-                               QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog,
+                               QFileDialog, QFrame, QHBoxLayout, QHeaderView,
+                               QLabel, QLineEdit, QListWidget, QMainWindow,
+                               QMessageBox, QProgressBar, QPushButton,
+                               QTableWidget, QTableWidgetItem, QVBoxLayout,
+                               QWidget)
 
 from . import adb, engine
 
@@ -31,6 +33,13 @@ QLabel#sideTitle {
     color: #ffffff;
     font-size: 15px;
     font-weight: 700;
+}
+QLabel#navItem {
+    color: #8ba398;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 8px;
 }
 QLabel#navActive {
     color: #34d399;
@@ -67,6 +76,11 @@ QLabel#statusWarn {
     border-radius: 999px;
     padding: 5px 12px;
     font-size: 11px;
+    font-weight: 600;
+}
+QLabel#cardTitle {
+    color: #ffffff;
+    font-size: 13px;
     font-weight: 600;
 }
 QLabel#kpiValue {
@@ -199,6 +213,19 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background: #10b981;
     border-color: #10b981;
+    image: url(__CHECK__);
+}
+QTableWidget::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #33413a;
+    background: #0d1210;
+}
+QTableWidget::indicator:checked {
+    background: #10b981;
+    border-color: #10b981;
+    image: url(__CHECK__);
 }
 QProgressBar {
     background: #0d1210;
@@ -442,6 +469,19 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background: #10b981;
     border-color: #10b981;
+    image: url(__CHECK__);
+}
+QTableWidget::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+}
+QTableWidget::indicator:checked {
+    background: #10b981;
+    border-color: #10b981;
+    image: url(__CHECK__);
 }
 QProgressBar {
     background: #eef0f3;
@@ -502,6 +542,33 @@ QMessageBox QPushButton:hover {
 THEMES = {"dark": STYLESHEET, "light": LIGHT_STYLESHEET}
 
 
+def _check_icon_path():
+    from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
+    path = os.path.join(os.path.dirname(engine.CONFIG_PATH), "check.png")
+    if not os.path.exists(path):
+        pix = QPixmap(32, 32)
+        pix.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pix)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor("#ffffff"))
+        pen.setWidth(4)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawLine(8, 17, 14, 23)
+        painter.drawLine(14, 23, 25, 9)
+        painter.end()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        pix.save(path)
+    return path
+
+
+def themed_stylesheet(theme):
+    return THEMES[theme].replace("__CHECK__", _check_icon_path())
+
+
+ACTION_COLORS = {"push": "#34d399", "pull": "#22d3ee", "skip": "#8ba398"}
+
+
 def human_size(n):
     value = float(n)
     for unit in ("B", "KB", "MB", "GB", "TB"):
@@ -513,6 +580,101 @@ def human_size(n):
 
 def fmt_time(ts):
     return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else "—"
+
+
+FILTER_KINDS = [("name", "file name contains"), ("extension", "extension"), ("path", "path contains")]
+
+
+def matches_filters(path, filters):
+    name = path.rsplit("/", 1)[-1].lower()
+    for f in filters:
+        v = f["value"].lower()
+        if f["kind"] == "name" and v not in name:
+            return False
+        if f["kind"] == "extension":
+            ext = v if v.startswith(".") else "." + v
+            if not name.endswith(ext):
+                return False
+        if f["kind"] == "path" and v not in path.lower():
+            return False
+    return True
+
+
+class FilterDialog(QDialog):
+    def __init__(self, parent, filters, sample_paths):
+        super().__init__(parent)
+        self.setWindowTitle("Filters")
+        self.setMinimumSize(480, 400)
+        self.filters = [dict(f) for f in filters]
+        self.sample_paths = sample_paths
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
+        info = QLabel("Only files matching ALL filters are shown in the plan table. Double-click a filter to remove it.")
+        info.setObjectName("devLabel")
+        info.setWordWrap(True)
+        layout.addWidget(info)
+        self.list = QListWidget()
+        self.list.itemDoubleClicked.connect(self.remove_filter)
+        layout.addWidget(self.list)
+        add_row = QHBoxLayout()
+        self.kind = QComboBox()
+        self.kind.addItems([label for _key, label in FILTER_KINDS])
+        self.value_edit = QLineEdit()
+        self.value_edit.setPlaceholderText("e.g. report   or   .jpg   or   /DCIM/")
+        add_btn = QPushButton("Add filter")
+        add_btn.clicked.connect(self.add_filter)
+        add_row.addWidget(self.kind)
+        add_row.addWidget(self.value_edit, 1)
+        add_row.addWidget(add_btn)
+        layout.addLayout(add_row)
+        self.count_label = QLabel("")
+        self.count_label.setObjectName("devValue")
+        layout.addWidget(self.count_label)
+        buttons = QHBoxLayout()
+        clear = QPushButton("Clear all")
+        clear.clicked.connect(self.clear_all)
+        buttons.addWidget(clear)
+        buttons.addStretch(1)
+        ok = QPushButton("Apply")
+        ok.setObjectName("primary")
+        ok.clicked.connect(self.accept)
+        cancel = QPushButton("Cancel")
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(ok)
+        buttons.addWidget(cancel)
+        layout.addLayout(buttons)
+        self.redraw()
+
+    def add_filter(self):
+        value = self.value_edit.text().strip()
+        if not value:
+            return
+        kind = FILTER_KINDS[self.kind.currentIndex()][0]
+        self.filters.append({"kind": kind, "value": value})
+        self.value_edit.clear()
+        self.redraw()
+
+    def remove_filter(self, item):
+        row = self.list.row(item)
+        if 0 <= row < len(self.filters):
+            self.filters.pop(row)
+        self.redraw()
+
+    def clear_all(self):
+        self.filters = []
+        self.redraw()
+
+    def redraw(self):
+        self.list.clear()
+        labels = dict(FILTER_KINDS)
+        for f in self.filters:
+            self.list.addItem(f"{labels[f['kind']]}:  {f['value']}")
+        if self.sample_paths:
+            n = sum(1 for p in self.sample_paths if matches_filters(p, self.filters))
+            self.count_label.setText(f"{n} of {len(self.sample_paths)} files in the current plan match")
+        else:
+            self.count_label.setText("Build a plan first to see live match counts")
 
 
 class RemoteFolderDialog(QDialog):
@@ -572,6 +734,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("USB Folder Sync")
         self.setMinimumSize(880, 600)
         self.plan = []
+        self.filters = []
 
         central = QWidget()
         central.setObjectName("central")
@@ -682,8 +845,10 @@ class MainWindow(QMainWindow):
         actions_row = QHBoxLayout()
         actions_row.setSpacing(10)
         self.search = QLineEdit()
-        self.search.setPlaceholderText("Filter files…")
+        self.search.setPlaceholderText("Quick filter: type a file name…")
         self.search.textChanged.connect(self.filter_table)
+        self.filters_button = QPushButton("Filters")
+        self.filters_button.clicked.connect(self.open_filter_dialog)
         self.select_all = QCheckBox("Select all")
         self.select_all.setChecked(True)
         self.select_all.stateChanged.connect(self.toggle_all)
@@ -696,6 +861,7 @@ class MainWindow(QMainWindow):
         self.apply_button.setEnabled(False)
         self.apply_button.clicked.connect(self.apply_selected)
         actions_row.addWidget(self.search, 1)
+        actions_row.addWidget(self.filters_button)
         actions_row.addWidget(self.select_all)
         actions_row.addStretch(1)
         actions_row.addWidget(self.sync_button)
@@ -738,7 +904,7 @@ class MainWindow(QMainWindow):
 
     def toggle_theme(self):
         self.theme = "light" if self.theme == "dark" else "dark"
-        QApplication.instance().setStyleSheet(THEMES[self.theme])
+        QApplication.instance().setStyleSheet(themed_stylesheet(self.theme))
         cfg = engine.load_config()
         cfg["theme"] = self.theme
         engine.save_config(cfg)
@@ -860,11 +1026,20 @@ class MainWindow(QMainWindow):
             self.table.setItem(row, 5, QTableWidgetItem(item.detail))
         self.filter_table(self.search.text())
 
+    def open_filter_dialog(self):
+        dlg = FilterDialog(self, self.filters, [i.path for i in self.plan])
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.filters = dlg.filters
+            self.filters_button.setText("Filters" if not self.filters else f"Filters ({len(self.filters)})")
+            self.filter_table(self.search.text())
+
     def filter_table(self, text):
         needle = text.strip().lower()
         for row in range(self.table.rowCount()):
             item = self.table.item(row, 2)
-            self.table.setRowHidden(row, bool(needle) and needle not in (item.text().lower() if item else ""))
+            path = item.text() if item else ""
+            visible = (not needle or needle in path.lower()) and matches_filters(path, self.filters)
+            self.table.setRowHidden(row, not visible)
 
     def toggle_all(self, state):
         checked = state == Qt.CheckState.Checked.value
@@ -905,7 +1080,7 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    app.setStyleSheet(THEMES[engine.load_config().get("theme", "dark")])
+    app.setStyleSheet(themed_stylesheet(engine.load_config().get("theme", "dark")))
     app.setFont(QFont("Segoe UI", 10))
     window = MainWindow()
     window.show()
