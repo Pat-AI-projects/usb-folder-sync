@@ -39,6 +39,19 @@ def device_time():
     return int(_remote("date +%s").strip())
 
 
+def device_model():
+    ensure_device()
+    return _remote("getprop ro.product.model").strip() or "Android device"
+
+
+def storage(remote_dir):
+    out = _remote(f"df -h {shlex.quote(remote_dir)}")
+    parts = out.splitlines()[-1].split()
+    if len(parts) >= 6:
+        return {"size": parts[1], "used": parts[2], "free": parts[3]}
+    return {"size": "?", "used": "?", "free": "?"}
+
+
 def list_files(remote_dir):
     cmd = f"find {shlex.quote(remote_dir)} -type f -exec stat -c '%Y|%s|%n' {{}} +"
     out = _remote(cmd)
