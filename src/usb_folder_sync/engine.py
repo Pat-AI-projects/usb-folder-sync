@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from dataclasses import dataclass
@@ -6,6 +7,7 @@ from . import adb
 
 CLOCK_TOLERANCE_SECONDS = 60
 MTIME_EPSILON_SECONDS = 1
+HISTORY_PATH = os.path.join(os.path.expanduser("~"), ".usb_folder_sync", "history.json")
 
 
 @dataclass
@@ -19,6 +21,8 @@ class ReportItem:
     action: str
     path: str
     detail: str = ""
+    size: int = 0
+    mtime: float = 0.0
 
 
 def check_clocks():
@@ -53,42 +57,74 @@ def plan_sync(local_root, remote_root, decide):
         if in_local and in_remote:
             l, r = local[rel], remote[rel]
             if l.mtime > r.mtime + MTIME_EPSILON_SECONDS:
-                report.append(ReportItem("push", rel, "newer on PC"))
+                report.append(ReportItem("push", rel, "newer on PC", l.size, l.mtime))
             elif r.mtime > l.mtime + MTIME_EPSILON_SECONDS:
-                report.append(ReportItem("pull", rel, "newer on phone"))
+                report.append(ReportItem("pull", rel, "newer on phone", r.size, r.mtime))
             elif l.size != r.size:
                 choice = decide(rel, "same timestamp but different size")
                 if choice == "pc":
-                    report.append(ReportItem("push", rel, "resolved: PC version"))
+                    report.append(ReportItem("push", rel, "resolved: PC version", l.size, l.mtime))
                 elif choice == "phone":
-                    report.append(ReportItem("pull", rel, "resolved: phone version"))
+                    report.append(ReportItem("pull", rel, "resolved: phone version", r.size, r.mtime))
                 else:
-                    report.append(ReportItem("skip", rel, "resolved: kept both"))
+                    report.append(ReportItem("skip", rel, "resolved: kept both", l.size, l.mtime))
             else:
-                report.append(ReportItem("skip", rel, "already in sync"))
+                report.append(ReportItem("skip", rel, "already in sync", l.size, l.mtime))
         elif in_local:
             choice = decide(rel, "only on PC (new file, or deleted on phone?)")
             if choice == "copy":
-                report.append(ReportItem("push", rel, "copied to phone"))
+                report.append(ReportItem("push", rel, "copied to phone", local[rel].size, local[rel].mtime))
             else:
-                report.append(ReportItem("skip", rel, "not copied"))
+                report.append(ReportItem("skip", rel, "not copied", local[rel].size, local[rel].mtime))
         else:
             choice = decide(rel, "only on phone (new file, or deleted on PC?)")
             if choice == "copy":
-                report.append(ReportItem("pull", rel, "copied to PC"))
+                report.append(ReportItem("pull", rel, "copied to PC", remote[rel].size, remote[rel].mtime))
             else:
-                report.append(ReportItem("skip", rel, "not copied"))
+                report.append(ReportItem("skip", rel, "not copied", remote[rel].size, remote[rel].mtime))
     return report
 
 
-def execute(local_root, remote_root, report):
-    for item in report:
+def apply(local_root, remote_root, items, progress=None):
+    total = sum(i.size for i in items if i.action in ("push", "pull")) or 1
+    done = 0
+    for item in items:
         if item.action == "push":
-            parent = os.path.dirname(_remote_path(remote_root, item.path))
-            adb.makedirs(parent)
+            adb.makedirs(os.path.dirname(_remote_path(remote_root, item.path)))
+            if progress:
+                progress(item.path, done / total)
             adb.push(os.path.join(local_root, item.path), _remote_path(remote_root, item.path))
+            done += item.size
         elif item.action == "pull":
             local_path = os.path.join(local_root, item.path)
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            if progress:
+                progress(item.path, done / total)
             adb.pull(_remote_path(remote_root, item.path), local_path)
-    return report
+            done += item.size
+    if progress:
+        progress("", 1.0)
+    return items
+
+
+def log_run(local_root, remote_root, report, clock_ok, drift):
+    os.makedirs(os.path.dirname(HISTORY_PATH), exist_ok=True)
+    entry = {
+        "time": time.time(),
+        "local_root": local_root,
+        "remote_root": remote_root,
+        "clock_ok": clock_ok,
+        "drift_seconds": round(drift, 1),
+        "items": [{"action": i.action, "path": i.path, "detail": i.detail} for i in report],
+    }
+    history = []
+    if os.path.exists(HISTORY_PATH):
+        try:
+            with open(HISTORY_PATH, encoding="utf-8") as fh:
+                history = json.load(fh)
+        except (OSError, ValueError):
+            history = []
+    history.append(entry)
+    with open(HISTORY_PATH, "w", encoding="utf-8") as fh:
+        json.dump(history[-100:], fh, indent=2)
+    return entry
