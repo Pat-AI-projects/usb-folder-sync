@@ -45,7 +45,7 @@ def _remote_path(remote_root, rel):
 
 def plan_sync(local_root, remote_root, decide):
     local = scan_local(local_root)
-    remote = adb.list_files(remote_root)
+    remote = {rel: FileEntry(mtime, size) for rel, (mtime, size) in adb.list_files(remote_root).items()}
     report = []
     for rel in sorted(set(local) | set(remote)):
         in_local = rel in local
